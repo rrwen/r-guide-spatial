@@ -1,0 +1,108 @@
+---
+title: "Quickstart to Mapping using the sf R Package"
+author:
+- "Richard Wen richard.wen@utoronto.ca"
+date: "`r format(Sys.time(), '%B %d, %Y')`"
+knit: |
+    (function(input_rmd, ...) {
+    rmarkdown::render(
+        input_rmd,
+        rmarkdown::html_document(
+            toc = TRUE,
+            toc_float = TRUE,
+            highlight = "zenburn",
+            code_folding = "hide",
+            df_print = "paged",
+            self_contained = FALSE
+        ),
+        output_dir = "../docs",
+        output_file = "index", ...)
+    })
+---
+
+```{r include = FALSE, echo = FALSE}
+knitr::opts_chunk$set(
+	warning = FALSE,
+	message = FALSE
+)
+```
+
+# Installation
+
+1.  Install [R](https://www.r-project.org/)
+2.  Install [RTools](https://cran.r-project.org/) if you are on Windows
+3.  Install [RStudio](https://posit.co/download/rstudio-desktop/)
+
+For more details, see [Software and Package Versions](#software-and-package-versions).
+
+# Running This Code
+
+1.  Ensure the installation steps above are completed
+2.  Download a zip of the code and data [here](https://github.com/rrwen/r-sf-quickstart) repo```/archive/refs/heads/main.zip) and unzip it
+    - Code Repository: [github.com/rrwen/r-sf-quickstart](https://github.com/rrwen/r-sf-quickstart)
+3.  In RStudio, open the [src/src.Rproj](https://github.com/rrwen/r-sf-quickstart/blob/main/src/src.Rproj) file
+4.  Then, open the [src/index.Rmd](https://github.com/rrwen/r-sf-quickstart/blob/main/src/index.Rmd) file
+5.  In RStudio:
+    - Run all code: Click the `Run` drop down (top right of the code pane) and click `Run All`
+    - Generate HTML version: Click `knit` (top left of code pane) and a file will be generated in `docs/index.html`
+
+# Libraries
+
+Install R packages if needed.
+
+```{r eval = FALSE}
+install.packages("tidyverse")
+install.packages("sf")
+install.packages("ggspatial")
+```
+
+```{r results = FALSE, echo = FALSE}
+
+# Required packages
+required_packages <- c(
+  "ggspatial",
+	"sf",
+	"tidyverse"
+)
+
+# Try to install packages if not installed
+default_options <- options()
+tryCatch(
+	{
+		# Disable interactivity
+		options(install.packages.compile.from.source = "always")
+		
+		# Install package if not installed
+		for (package in required_packages) {
+			is_package_installed <- require(package, character.only = TRUE)
+			if (!is_package_installed & package != "osmplotr") {
+				cat(paste0("Installing package: ", package, "\n"))
+				install.packages(package)
+			} else {
+				cat(paste0("Package already installed: ", package, "\n"))
+			}
+		}
+	},
+	error = function(cond) {
+		stop(cond)
+	},
+	finally = {
+		options(default_options) # reset interactivity
+	}
+)
+```
+
+
+# Software and Package Versions {#software-and-package-versions}
+
+R and R package versions:
+
+```{r echo = FALSE}
+sessionInfo()
+```
+
+RStudio version:
+
+```{r echo = FALSE}
+rstudioapi::versionInfo()
+```

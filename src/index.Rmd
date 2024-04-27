@@ -1,5 +1,5 @@
 ---
-title: "Short Introduction to Spatial Data Processing in R"
+title: "Short Introduction to Practical Spatial Data Processing in R"
 author:
 - "Richard Wen rrwen.dev@gmail.com"
 date: "`r format(Sys.time(), '%B %d, %Y')`"

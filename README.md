@@ -1,4 +1,4 @@
-# Short Introduction to Spatial Data Processing in R
+# Short Introduction to Practical Spatial Data Processing in R
 
 A short introduction to spatial data processing in R covering practical code for:
 

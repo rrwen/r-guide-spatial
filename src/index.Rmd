@@ -38,7 +38,7 @@ For more details, see [Software and Package Versions](#software-and-package-vers
 # Running This Code
 
 1.  Ensure the installation steps above are completed
-2.  Download a zip of the code and data [here](https://github.com/rrwen/r-spintro) repo```/archive/refs/heads/main.zip) and unzip it
+2.  Download a zip of the code and data [here](https://github.com/rrwen/r-spintro/archive/refs/heads/main.zip) and unzip it
     - Code Repository: [github.com/rrwen/r-spintro](https://github.com/rrwen/r-spintro)
 3.  In RStudio, open the [src/src.Rproj](https://github.com/rrwen/r-spintro/blob/main/src/src.Rproj) file
 4.  Then, open the [src/index.Rmd](https://github.com/rrwen/r-spintro/blob/main/src/index.Rmd) file

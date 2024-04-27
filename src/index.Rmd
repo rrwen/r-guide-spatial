@@ -468,11 +468,6 @@ ggsave(
 )
 ```
 
-The visualization element of spatial data is relatively more complicated, thus other alternatives to creating maps more interactively are:
-
-* [QGIS](https://www.qgis.org/en/site/): free and open source GIS software available for all operating systems
-* [ArcGIS Pro](https://www.esri.com/en-us/arcgis/products/arcgis-pro/overview): paid industry GIS software for Windows
-
 ## Writing Spatial Data
 
 Now that we are done processing our data, we should save the results to a file with the [write_sf](https://r-spatial.github.io/sf/reference/st_write.html) function.
@@ -509,6 +504,13 @@ That concludes the tutorial! For further information and other tutorials, see:
 * [ggspatial: Spatial objects for ggplot2](https://paleolimbot.github.io/ggspatial/articles/ggspatial.html)
 * [ggplot2: Introduction to ggplot2](https://ggplot2.tidyverse.org/articles/ggplot2.html)
 * [dplyr: Introduction to dplyr](https://dplyr.tidyverse.org/articles/dplyr.html)
+
+# Other GIS Software
+
+The visualization and mapping of spatial data is relatively complicated to get right, thus other alternatives to designing and creating maps more interactively and manually are:
+
+* [QGIS](https://www.qgis.org/en/site/): free and open source GIS software available for all operating systems
+* [ArcGIS Pro](https://www.esri.com/en-us/arcgis/products/arcgis-pro/overview): paid industry GIS software for Windows
 
 # Software and Package Versions {#software-and-package-versions}
 

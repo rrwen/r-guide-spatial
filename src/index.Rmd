@@ -1,7 +1,7 @@
 ---
-title: "Quickstart to Mapping using the sf R Package"
+title: "Short Introduction to Spatial Data Processing in R"
 author:
-- "Richard Wen richard.wen@utoronto.ca"
+- "Richard Wen rrwen.dev@gmail.com"
 date: "`r format(Sys.time(), '%B %d, %Y')`"
 knit: |
     (function(input_rmd, ...) {
@@ -11,7 +11,7 @@ knit: |
             toc = TRUE,
             toc_float = TRUE,
             highlight = "zenburn",
-            code_folding = "hide",
+            code_folding = "show",
             df_print = "paged",
             self_contained = FALSE
         ),
@@ -38,22 +38,34 @@ For more details, see [Software and Package Versions](#software-and-package-vers
 # Running This Code
 
 1.  Ensure the installation steps above are completed
-2.  Download a zip of the code and data [here](https://github.com/rrwen/r-sf-quickstart) repo```/archive/refs/heads/main.zip) and unzip it
-    - Code Repository: [github.com/rrwen/r-sf-quickstart](https://github.com/rrwen/r-sf-quickstart)
-3.  In RStudio, open the [src/src.Rproj](https://github.com/rrwen/r-sf-quickstart/blob/main/src/src.Rproj) file
-4.  Then, open the [src/index.Rmd](https://github.com/rrwen/r-sf-quickstart/blob/main/src/index.Rmd) file
+2.  Download a zip of the code and data [here](https://github.com/rrwen/r-spintro) repo```/archive/refs/heads/main.zip) and unzip it
+    - Code Repository: [github.com/rrwen/r-sf-quickstart](https://github.com/rrwen/r-spintro)
+3.  In RStudio, open the [src/src.Rproj](https://github.com/rrwen/r-spintro/blob/main/src/src.Rproj) file
+4.  Then, open the [src/index.Rmd](https://github.com/rrwen/r-spintro/blob/main/src/index.Rmd) file
 5.  In RStudio:
     - Run all code: Click the `Run` drop down (top right of the code pane) and click `Run All`
     - Generate HTML version: Click `knit` (top left of code pane) and a file will be generated in `docs/index.html`
 
 # Libraries
 
-Install R packages if needed.
+Install R packages if needed:
+
+* `tidyverse`: general data processing package that works with tabular structured data
+* `lubridate`: convenient functions for handling date and time data
+* `sf`: spatially enables the `tidyverse` package to extend functionality for spatial data
+* `ggplot2`: package for creating plots, including maps of `sf` objects
+* `tmap`: useful for quick static and interactive maps of `sf` objects
+* `ggspatial`: makes plotting general map elements like base maps, north arrows and scale bars easier
+* `prettymapr`: required dependency for `ggspatial` to create base maps
 
 ```{r eval = FALSE}
 install.packages("tidyverse")
+install.packages("lubridate")
 install.packages("sf")
+install.packages("tmap")
 install.packages("ggspatial")
+install.packages("ggplot2")
+install.packages("prettymapr")
 ```
 
 ```{r results = FALSE, echo = FALSE}
@@ -62,7 +74,11 @@ install.packages("ggspatial")
 required_packages <- c(
   "ggspatial",
 	"sf",
-	"tidyverse"
+  "prettymapr",
+  "tmap",
+	"tidyverse",
+  "lubridate",
+  "ggplot2"
 )
 
 # Try to install packages if not installed
@@ -75,7 +91,7 @@ tryCatch(
 		# Install package if not installed
 		for (package in required_packages) {
 			is_package_installed <- require(package, character.only = TRUE)
-			if (!is_package_installed & package != "osmplotr") {
+			if (!is_package_installed) {
 				cat(paste0("Installing package: ", package, "\n"))
 				install.packages(package)
 			} else {
@@ -92,6 +108,373 @@ tryCatch(
 )
 ```
 
+Load libraries.
+
+```{r}
+library(tidyverse)
+library(lubridate)
+library(sf)
+library(ggspatial)
+library(tmap)
+library(ggplot2)
+```
+
+# Tutorial
+
+For this tutorial, we will be using the following data mainly:
+
+* [Toronto Police KSI Data](https://data.torontopolice.on.ca/datasets/TorontoPS::ksi/about)
+* [Toronto Neighbourhoods Data](https://open.toronto.ca/dataset/neighbourhoods/)
+
+Later in the tutorial, we will also use:
+
+* [Toronto ASE Location Data](https://open.toronto.ca/dataset/automated-speed-enforcement-locations/)
+
+## Reading Spatial Data
+
+To read spatial data use the [read_sf](https://r-spatial.github.io/sf/reference/st_read.html) function.
+
+**Note**: For shapefiles, simply use extension `.shp`.
+
+```{r}
+ksi <- read_sf("../data/toronto-ksi.geojson")
+nbhoods <- read_sf("../data/toronto-nbhoods.geojson")
+```
+
+## Preview Non-spatial Data
+
+Non-spatial data works similarly to standard `data.frame` structures, except the addition of a `geometry` column usually at the end of the columns.
+
+Let's preview the non-spatial KSI data: 
+
+```{r}
+ksi
+```
+
+and also the Neighbourhoods data:
+
+```{r}
+nbhoods
+```
+
+Most [dplyr](https://dplyr.tidyverse.org/) functions from `tidyverse` will work with `sf` objects, allowing you to easily manipulate the non-spatial portions of the read spatial data.
+
+For example, we get the number of KSI collisions each year using the `year` function from `lubridate` and `count` from `dplyr`:
+
+```{r}
+ksi %>%
+  count(year(DATE))
+```
+
+## Preview Spatial Data
+
+You can preview spatial data using [plot](https://r-spatial.github.io/sf/articles/sf5.html?q=plot#plot-methods-for-sf-and-sfc-objects), which generates several maps of up to the first 9 columns as the default.
+
+Let's preview the KSI data:
+
+```{r}
+plot(ksi)
+```
+
+We can also preview a specific variable:
+
+```{r}
+plot(ksi["ACCLASS"])
+```
+
+and again for the Neighbourhoods data:
+
+```{r}
+nbhoods
+```
+
+## Preview Spatial Data Interactively
+
+In addition to previewing spatial data statically, we can utilize the `tmap` package to preview spatial data interactively.
+
+Let's try it with the KSI data (we limit it to the first 1000 records due to the size of the data):
+
+* `tmap_mode` sets the visualization mode to interactive
+* `tm_shape` tells the `tmap` package to use the `ksi` data
+* `head` filters for the first 1000 rows
+* `tm_dots` visualizes the data as point data
+
+```{r}
+tmap_mode("view") # set to interactive mode
+
+tm_shape(ksi %>% head(1000)) +
+  tm_dots(
+    col = "ACCLASS", # color based on column
+    clustering = TRUE, # group points together for cleaner visuals
+    popup.vars = TRUE # allow user to click each point to inspect data
+  )
+```
+
+We can also do the same for the Neighbourhoods data but with `tm_polygons` from `tmap` instead:
+
+```{r}
+tmap_mode("view")
+
+tm_shape(nbhoods) +
+  tm_polygons(
+    	col = "#336699", # set polygon color
+    	border.col = "white", # set border color
+    	popup.vars = TRUE
+    )
+```
+
+## Coordinate Reference Systems (CRS)
+
+Each `sf` object should ideally have a defined CRS that affects the accuracy of coordinates, units of measurement, and spatially related calculations.
+
+For the KSI data, we can view the CRS with [st_crs](https://r-spatial.github.io/sf/reference/st_crs.html), which is usually WGS84 (World Geodetic System 1984, a global standard that is often used in most spatial data) with public registry reference [EPSG:4326](https://epsg.io/4326):
+
+```{r}
+st_crs(ksi)
+```
+
+We also see the same CRS is used for the neighbourhoods data:
+
+```{r}
+st_crs(nbhoods)
+```
+
+In most situations, you do not need to modify or define the CRS as the `sf` package handles accurate calculations and most CRS are distributed in WGS84, but we should always double check.
+
+To define the CRS if it is not given in the spatial data, we use [st_set_crs](https://r-spatial.github.io/sf/reference/st_crs.html) with the correct EPSG number (`4326` in our case), which can be found on [espg.io](https://epsg.io).
+
+As an example, we will use a separate example such as the `nc.shp` file from the `sf` package, but set the CRS to `NA` as a demonstration:
+
+```{r}
+
+# Read example data
+exdata <- read_sf(
+  system.file("shape/nc.shp", package="sf"),
+  crs = NA
+)
+
+# View CRS
+st_crs(exdata)
+```
+
+Now can set the CRS to the correct one, which is NAD27 with [EPSG:4267](https://epsg.io/4267):
+
+```{r}
+
+# Set CRS to NAD27
+exdata <- exdata %>%
+  st_set_crs(4267)
+
+# View CRS again after setting it to NAD27
+st_crs(exdata)
+```
+
+Now that there is a defined CRS, we can reproject them with [st_transform](https://r-spatial.github.io/sf/reference/st_transform.html) to a different CRS, such as WGS84 (EPSG:4326), in case we do not have consistent CRS across different spatial data:
+
+```{r}
+exdata %>%
+  st_transform(4326)
+```
+
+It is important to ensure that all your spatial data is in the same CRS before mapping or conducting any spatially related calculations or processes.
+
+## Spatial Buffers
+
+A common spatial data processing task is to apply buffers (radial extensions of spatial geometries) to spatial objects, which can be done using the [st_buffer](https://r-spatial.github.io/sf/reference/geos_unary.html) function.
+
+Let's try this for a couple of records in the KSI data, which are originally points as seen below:
+
+```{r}
+
+# Select the first 3 records of KSI
+ksi_buff <- ksi %>%
+  head(3)
+
+# Display the KSI geometry as points
+ksi_buff %>%
+  select(geometry) %>%
+  plot
+```
+
+Then we can buffer the points in the KSI data by 1000 meters (unit of measure follows the CRS, which is meters for WGS84):
+
+```{r}
+
+# Buffer the point geoms by 1000m
+ksi_buff <- ksi_buff %>%
+  select(geometry) %>%
+  st_buffer(dist = 1000)
+
+# Plot polygon geometries after buffer
+ksi_buff %>%
+  select(geometry) %>%
+  plot
+```
+
+Applying buffers to points is useful for capturing other spatial objects within a certain distance of each point - relating captured spatial objects to each point.
+
+## Spatial Joins
+
+Another commonly used spatial function is spatial joins, which can be done using the [st_join](https://r-spatial.github.io/sf/reference/st_join.html) function.
+
+Let's try getting the number of KSI collisions in 2022 within each Neighbourhood.
+
+First, we filter out all KSI collisions for year 2022:
+
+```{r}
+
+# Filter for 2022 data
+ksi_2022 <- ksi %>%
+  filter(year(DATE) == 2022)
+
+# Preview the data
+ksi_2022 %>% as_tibble
+```
+
+Then, we must join each KSI point to each neighbourhood polygon:
+
+```{r}
+
+# Join KSI data to be within each neighbourhood polygon
+nbhoods_join <- nbhoods %>%
+  st_join(ksi_2022)
+
+# Preview the joined data
+nbhoods_join %>% as_tibble
+```
+
+Finally, we can apply the `count` function to get the number of collisions per neighbourhood in column `n`:
+
+```{r}
+
+# Count the joined ksis per nbhood
+nbhoods_ksi_2022 <- nbhoods_join %>%
+  count(AREA_ID, AREA_NAME)
+
+# Preview ksi per nbhood in 2022
+nbhoods_ksi_2022 %>% as_tibble
+```
+
+We can also plot these spatially:
+
+```{r}
+plot(nbhoods_ksi_2022["n"])
+```
+
+## Making Maps for Publications
+
+The `plot` function is convenient for previewing spatial data quickly, but makes it difficult to add standard map elements such as base maps, north arrows and scale bars.
+
+For publications, we can use the `ggspatial` package to create publication ready maps.
+
+As an example, we will utilize our joined 2022 KSI collision counts for each neighbourhood in Toronto, and create a publication ready map.
+
+We will also load the Automated Speed Enforcement (ASE) data for Toronto to map an extra layer on top of the neighbourhood collision data.
+
+```{r}
+ase <- read_sf("../data/toronto-ase.geojson")
+```
+
+Now that we have all the data we need, let's create a publication ready map:
+
+* [annotation_map_tile](https://paleolimbot.github.io/ggspatial/reference/annotation_map_tile.html): creates a base map
+* [annotation_north_arrow](https://paleolimbot.github.io/ggspatial/reference/annotation_north_arrow.html): creates the north arrow
+* [annotation_scale](https://paleolimbot.github.io/ggspatial/reference/annotation_scale.html): creates the scale bar
+* [layer_spatial](https://paleolimbot.github.io/ggspatial/reference/layer_spatial.html): creates a spatial layer
+* [labs](https://ggplot2.tidyverse.org/reference/labs.html): controls plot label elements
+* [guides](https://ggplot2.tidyverse.org/reference/guides.html): controls legend elements
+* [theme](https://ggplot2.tidyverse.org/reference/ggtheme.html): controls overall map/plot elements
+
+```{r}
+ggplot() +
+  annotation_map_tile(
+    zoomin = 1, # affects resolution of base map tiles
+    type = "cartolight", # type of base map
+    cachedir = "../data/cache" # cache the map tiles to avoid redownload
+  ) +
+  annotation_north_arrow(
+    width = unit(0.2, "cm"),
+    height = unit(0.5, "cm"),
+    location = "tr" # where to place the arrow
+  ) +
+  annotation_scale(
+    style = "ticks",
+    location = "br" # where to place the scale bar
+  ) +
+  labs(
+    title = "2022 Neighbourhood Collisions (Toronto, ON, CA)", # map title
+    caption = "Data Source(s): Toronto Police Service Public Safety Portal, City of Toronto Open Data\nCRS: WGS84 / *Automated Speed Enforcement (ASE), Killed or Seriously Injured (KSI)" # map note
+  ) +
+  layer_spatial( # add spatial data layer for collisions
+    nbhoods_ksi_2022, 
+    aes(fill = n) # set the fill color to n, which is num of collisions
+  ) +
+  layer_spatial( # add spatial data layer for ASE
+    ase,
+    fill = NA,
+    aes(color = "ASE* Camera") # set name of points for ASE
+  ) +
+  scale_color_manual(
+    values = c("ASE* Camera" = "salmon") # change ase point color
+  ) +
+  guides(
+    fill = guide_legend(
+      order = 1,
+      title = "KSI* Collisions" # legend title for collisions
+    ),
+    color = guide_legend(
+      order = 2,
+      title = element_blank() # remove legend title for ase
+    )
+  ) +
+  theme(
+    plot.caption = element_text(size = 6, color = "darkgray"), # alter note text
+    legend.key = element_blank(), # remove grey legend background in ase points
+    plot.title = element_text(hjust = 0.5) # center map title
+  )
+```
+
+The visualization element of spatial data is relatively more complicated, thus other alternatives to creating maps more interactively are:
+
+* [QGIS](https://www.qgis.org/en/site/): free and open source GIS software available for all operating systems
+* [ArcGIS Pro](https://www.esri.com/en-us/arcgis/products/arcgis-pro/overview): paid industry GIS software for Windows
+
+## Writing Spatial Data
+
+Now that we are done processing our data, we should save the results to a file with the [write_sf](https://r-spatial.github.io/sf/reference/st_write.html) function.
+
+Let's save our joined 2022 KSI collision counts for each neighbourhood in the `data` folder:
+
+```{r}
+
+# Save a geojson file
+nbhoods_ksi_2022 %>%
+  write_sf("../data/toronto-nbhoods-ksi-2022.geojson")
+
+# Save a shapefile
+nbhoods_ksi_2022 %>%
+  write_sf("../data/toronto-nbhoods-ksi-2022.shp")
+```
+
+Later on, we can read the saved shapefile back in:
+
+```{r}
+
+# Read the shapefile back in
+nbhoods_ksi_2022 <- read_sf("../data/toronto-nbhoods-ksi-2022.shp")
+
+# Preview the data
+nbhoods_ksi_2022 %>% as_tibble
+```
+
+# Other Tutorials
+
+That concludes the tutorial! For further information and other tutorials, see:
+
+* [sf: Simple Features for R](https://r-spatial.github.io/sf/articles/sf1.html)
+* [ggspatial: Spatial objects for ggplot2](https://paleolimbot.github.io/ggspatial/articles/ggspatial.html)
+* [ggplot2: Introduction to ggplot2](https://ggplot2.tidyverse.org/articles/ggplot2.html)
+* [dplyr: Introduction to dplyr](https://dplyr.tidyverse.org/articles/dplyr.html)
 
 # Software and Package Versions {#software-and-package-versions}
 

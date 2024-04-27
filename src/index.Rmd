@@ -39,7 +39,7 @@ For more details, see [Software and Package Versions](#software-and-package-vers
 
 1.  Ensure the installation steps above are completed
 2.  Download a zip of the code and data [here](https://github.com/rrwen/r-spintro) repo```/archive/refs/heads/main.zip) and unzip it
-    - Code Repository: [github.com/rrwen/r-sf-quickstart](https://github.com/rrwen/r-spintro)
+    - Code Repository: [github.com/rrwen/r-spintro](https://github.com/rrwen/r-spintro)
 3.  In RStudio, open the [src/src.Rproj](https://github.com/rrwen/r-spintro/blob/main/src/src.Rproj) file
 4.  Then, open the [src/index.Rmd](https://github.com/rrwen/r-spintro/blob/main/src/index.Rmd) file
 5.  In RStudio:
@@ -123,12 +123,14 @@ library(ggplot2)
 
 For this tutorial, we will be using the following data mainly:
 
-* [Toronto Police KSI Data](https://data.torontopolice.on.ca/datasets/TorontoPS::ksi/about)
-* [Toronto Neighbourhoods Data](https://open.toronto.ca/dataset/neighbourhoods/)
+* [Toronto Police KSI Data](https://data.torontopolice.on.ca/datasets/TorontoPS::ksi/about): `data/toronto-ksi-geojson`
+* [Toronto Neighbourhoods Data](https://open.toronto.ca/dataset/neighbourhoods/): `data/toronto-nbhoods.geojson`
 
 Later in the tutorial, we will also use:
 
-* [Toronto ASE Location Data](https://open.toronto.ca/dataset/automated-speed-enforcement-locations/)
+* [Toronto ASE Location Data](https://open.toronto.ca/dataset/automated-speed-enforcement-locations/): `data/toronto-ase.geojson`
+
+All data is available in the [data folder](https://github.com/rrwen/r-spintro/tree/main/data).
 
 ## Reading Spatial Data
 
@@ -386,7 +388,9 @@ Now that we have all the data we need, let's create a publication ready map:
 * [theme](https://ggplot2.tidyverse.org/reference/ggtheme.html): controls overall map/plot elements
 
 ```{r}
-ggplot() +
+
+# Create pub ready map
+ksi_map <- ggplot() +
   annotation_map_tile(
     zoomin = 1, # affects resolution of base map tiles
     type = "cartolight", # type of base map
@@ -432,6 +436,36 @@ ggplot() +
     legend.key = element_blank(), # remove grey legend background in ase points
     plot.title = element_text(hjust = 0.5) # center map title
   )
+
+# Show pub ready map
+ksi_map
+```
+
+## Saving Maps
+
+We can save the map we made in the previous section into a file with [ggsave](https://ggplot2.tidyverse.org/reference/ggsave.html) - ready to be included in a publication:
+
+```{r}
+
+# Save to a pdf
+ggsave(
+  "../figures/fig-ksi-2022.pdf",
+  plot = ksi_map,
+  width = 8,
+  height = 5,
+  units = "in",
+  dpi = 600
+)
+
+# Save to a png
+ggsave(
+  "../figures/fig-ksi-2022.png",
+  plot = ksi_map,
+  width = 8,
+  height = 5,
+  units = "in",
+  dpi = 600
+)
 ```
 
 The visualization element of spatial data is relatively more complicated, thus other alternatives to creating maps more interactively are:

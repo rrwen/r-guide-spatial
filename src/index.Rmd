@@ -300,9 +300,9 @@ plot(polygon)
 
 ## Reading Non-spatial Data with Coordinates
 
-Sometimes, the data file is not in a spatial format such as `.geojson` or `.shp`, but coordinates such as longitude and latitude is given along with what the Coordinate Reference System (CRS) is.
+Sometimes, the data file is not in a spatial format such as `.geojson` or `.shp`, but coordinates, such as longitude and latitude are given along with the Coordinate Reference System (CRS).
 
-For these cases, we can first first read in the non-spatial data normally.
+For these cases, we can first read in the non-spatial data normally and then convert the coordinates into `sf` objects after.
 
 As an example, we use the non-spatial ASE data in Comma Separated Values (CSV) format, which contains longitude and latitude coordinates that can be converted into a `sf` object.
 

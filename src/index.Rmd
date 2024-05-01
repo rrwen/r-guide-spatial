@@ -27,6 +27,14 @@ knitr::opts_chunk$set(
 )
 ```
 
+# Suggested Audience
+
+This short introduction contains a quick tutorial suggested for users who have basic knowledge of R.
+
+The code assumes the user knows how to run R code in the console/terminal, and has an understanding of `data.frame` objects and common `R` and `tidyverse` syntax.
+
+However, anyone is welcome (and highly encouraged!) to follow and play around with the tutorial in this introduction - especially those who are curious or interested to learn about spatial data processing in R!
+
 # Installation
 
 1.  Install [R](https://www.r-project.org/)
@@ -121,14 +129,11 @@ library(ggplot2)
 
 # Tutorial
 
-For this tutorial, we will be using the following data mainly:
+For this tutorial, we will be using the following data:
 
 * [Toronto Police KSI Data](https://data.torontopolice.on.ca/datasets/TorontoPS::ksi/about): `data/toronto-ksi-geojson`
 * [Toronto Neighbourhoods Data](https://open.toronto.ca/dataset/neighbourhoods/): `data/toronto-nbhoods.geojson`
-
-Later in the tutorial, we will also use:
-
-* [Toronto ASE Location Data](https://open.toronto.ca/dataset/automated-speed-enforcement-locations/): `data/toronto-ase.geojson`
+* [Toronto ASE Location Data](https://open.toronto.ca/dataset/automated-speed-enforcement-locations/): `data/toronto-ase.csv` (for demonstration purposes, we use a non-spatial file with coordinates to start)
 
 All data is available in the [data folder](https://github.com/rrwen/r-spintro/tree/main/data).
 
@@ -143,9 +148,191 @@ ksi <- read_sf("../data/toronto-ksi.geojson")
 nbhoods <- read_sf("../data/toronto-nbhoods.geojson")
 ```
 
+## Coordinate Reference Systems (CRS)
+
+Once you have read the spatial data into `sf` objects, each `sf` object should ideally have a defined CRS that affects the accuracy of coordinates, units of measurement, and spatially related calculations.
+
+For the KSI data, we can view the CRS with [st_crs](https://r-spatial.github.io/sf/reference/st_crs.html), which is usually WGS84 (World Geodetic System 1984, a global standard that is often used in most spatial data) with public registry reference [EPSG:4326](https://epsg.io/4326):
+
+```{r}
+st_crs(ksi)
+```
+
+We also see the same CRS is used for the neighbourhoods data:
+
+```{r}
+st_crs(nbhoods)
+```
+
+In most situations, you do not need to modify or define the CRS as the `sf` package handles accurate calculations and most CRS are distributed in WGS84, but we should always double check.
+
+To define the CRS if it is not given in the spatial data, we use [st_set_crs](https://r-spatial.github.io/sf/reference/st_crs.html) with the correct EPSG number (`4326` in our case), which can be found on [espg.io](https://epsg.io).
+
+As an example, we will use a separate example such as the `nc.shp` file from the `sf` package, but set the CRS to `NA` as a demonstration:
+
+```{r}
+
+# Read example data
+exdata <- read_sf(
+  system.file("shape/nc.shp", package="sf"),
+  crs = NA
+)
+
+# View CRS
+st_crs(exdata)
+```
+
+Now can set the CRS to the correct one, which is NAD27 with [EPSG:4267](https://epsg.io/4267):
+
+```{r}
+
+# Set CRS to NAD27
+exdata <- exdata %>%
+  st_set_crs(4267)
+
+# View CRS again after setting it to NAD27
+st_crs(exdata)
+```
+
+Now that there is a defined CRS, we can reproject them with [st_transform](https://r-spatial.github.io/sf/reference/st_transform.html) to a different CRS, such as WGS84 (EPSG:4326), in case we do not have consistent CRS across different spatial data:
+
+```{r}
+exdata %>%
+  st_transform(4326)
+```
+
+It is important to ensure that all your spatial data is in the same CRS before mapping or conducting any spatially related calculations or processes.
+
+## Geometry Types
+
+Each `sf` object is made up of ordered coordinates that define the geometry of the objects.
+
+Commonly, there are three general geometry types:
+
+* `POINT`: pairs of xy coordinates making up points in space
+* `LINESTRING`: multiple point coordinates (in order) that make up lines in space
+* `POLYGON`: multiple point coordinates (in order) that enclose areas in space
+* `MULTIPOINT, MULTILINESTRING, MULTIPOLYGON`: same as above, but with more than one `sf` object per row
+
+**Note**: There are a few other rarer geometry types seen [here](https://r-spatial.github.io/sf/articles/sf1.html#simple-feature-geometry-types).
+
+### Points
+
+Points are simply pairs of coordinates:
+
+```{r}
+
+# Set coordinates for Toronto
+coordinates <- c(-79.3832, 43.6532)
+
+# Convert coordinates to points
+point <- st_point(coordinates)
+
+# Show point
+plot(point)
+```
+
+### Lines
+
+Lines are an ordered set of points.
+
+To demonstrate let's create a line from Toronto, through Ottawa, to Montreal (Canada).
+
+First, create a set of ordered coordinates.
+
+```{r}
+coordinates2 <- data.frame(
+  longitude = c(-79.3832, -75.7003, -73.5674),
+  latitude = c(43.6532, 45.4201, 45.5019)
+)
+
+coordinates2
+```
+
+Next, convert these coordinates to a multipoint object:
+
+```{r}
+multipoint <- st_multipoint(as.matrix(coordinates2))
+
+plot(multipoint)
+```
+
+Finally, convert the multipoint to a line:
+
+```{r}
+linestring <- st_linestring(multipoint)
+
+plot(linestring)
+```
+
+### Polygons
+
+Polygons are sets of ordered coordinates with an enclosed area formed by joining the starting and ending coordinate.
+
+To demonstrate, we will create an ordered set of coordinates for Toronto, Kingston, and Ottawa (Canada).
+
+**Note**: The last coordinate is the same as the first one to form the enclosed area.
+
+```{r}
+coordinates3 <- data.frame(
+  longitude = c(-79.3832, -75.7003, -76.4930, -79.3832),
+  latitude = c(43.6532, 44.2334, 45.4201, 43.6532)
+)
+
+coordinates3
+```
+
+We then want to convert these coordinates to a multipoint object as shown previously:
+
+```{r}
+multipoint2 <- st_multipoint(as.matrix(coordinates3))
+
+plot(multipoint2)
+```
+
+Lastly, we can enclose these points to form a triangular area:
+
+```{r}
+polygon <- st_polygon(list(multipoint2))
+
+plot(polygon)
+```
+
+## Reading Non-spatial Data with Coordinates
+
+Sometimes, the data file is not in a spatial format such as `.geojson` or `.shp`, but coordinates such as longitude and latitude is given along with what the Coordinate Reference System (CRS) is.
+
+For these cases, we can first first read in the non-spatial data normally.
+
+As an example, we use the non-spatial ASE data in Comma Separated Values (CSV) format, which contains longitude and latitude coordinates that can be converted into a `sf` object.
+
+**Note**: According to the [Toronto ASE Data Page](https://open.toronto.ca/dataset/automated-speed-enforcement-locations/), the CRS is WGS84 (EPSG:4326).
+
+```{r}
+ase <- read_csv("../data/toronto-ase.csv")
+ase
+```
+
+Next, we convert the columns `longitude` and `latitude` (holding our coordinates), into `sf` objects with CRS `EPSG:4326`:
+
+```{r}
+ase <- ase %>%
+  st_as_sf(
+    coords = c("longitude", "latitude"), # cols for coordinates
+    crs = 4326 # CRS is WGS84
+  )
+```
+
+Then we can inspect our data to see that the coordinates have been converted successfully with the addition of a `geometry` column:
+
+```{r}
+ase %>%
+  relocate(geometry, .after = `_id`) # show geometry as second col after _id
+```
+
 ## Preview Non-spatial Data
 
-Non-spatial data works similarly to standard `data.frame` structures, except the addition of a `geometry` column usually at the end of the columns.
+As you have seen in the previous section, non-spatial data works similarly to standard `data.frame` structures, except with the addition of a `geometry` column usually at the end of the columns.
 
 Let's preview the non-spatial KSI data: 
 
@@ -224,61 +411,6 @@ tm_shape(nbhoods) +
     	popup.vars = TRUE
     )
 ```
-
-## Coordinate Reference Systems (CRS)
-
-Each `sf` object should ideally have a defined CRS that affects the accuracy of coordinates, units of measurement, and spatially related calculations.
-
-For the KSI data, we can view the CRS with [st_crs](https://r-spatial.github.io/sf/reference/st_crs.html), which is usually WGS84 (World Geodetic System 1984, a global standard that is often used in most spatial data) with public registry reference [EPSG:4326](https://epsg.io/4326):
-
-```{r}
-st_crs(ksi)
-```
-
-We also see the same CRS is used for the neighbourhoods data:
-
-```{r}
-st_crs(nbhoods)
-```
-
-In most situations, you do not need to modify or define the CRS as the `sf` package handles accurate calculations and most CRS are distributed in WGS84, but we should always double check.
-
-To define the CRS if it is not given in the spatial data, we use [st_set_crs](https://r-spatial.github.io/sf/reference/st_crs.html) with the correct EPSG number (`4326` in our case), which can be found on [espg.io](https://epsg.io).
-
-As an example, we will use a separate example such as the `nc.shp` file from the `sf` package, but set the CRS to `NA` as a demonstration:
-
-```{r}
-
-# Read example data
-exdata <- read_sf(
-  system.file("shape/nc.shp", package="sf"),
-  crs = NA
-)
-
-# View CRS
-st_crs(exdata)
-```
-
-Now can set the CRS to the correct one, which is NAD27 with [EPSG:4267](https://epsg.io/4267):
-
-```{r}
-
-# Set CRS to NAD27
-exdata <- exdata %>%
-  st_set_crs(4267)
-
-# View CRS again after setting it to NAD27
-st_crs(exdata)
-```
-
-Now that there is a defined CRS, we can reproject them with [st_transform](https://r-spatial.github.io/sf/reference/st_transform.html) to a different CRS, such as WGS84 (EPSG:4326), in case we do not have consistent CRS across different spatial data:
-
-```{r}
-exdata %>%
-  st_transform(4326)
-```
-
-It is important to ensure that all your spatial data is in the same CRS before mapping or conducting any spatially related calculations or processes.
 
 ## Spatial Buffers
 
@@ -371,11 +503,7 @@ For publications, we can use the `ggspatial` package to create publication ready
 
 As an example, we will utilize our joined 2022 KSI collision counts for each neighbourhood in Toronto, and create a publication ready map.
 
-We will also load the Automated Speed Enforcement (ASE) data for Toronto to map an extra layer on top of the neighbourhood collision data.
-
-```{r}
-ase <- read_sf("../data/toronto-ase.geojson")
-```
+We will also use the Automated Speed Enforcement (ASE) data for Toronto to map an extra layer on top of the neighbourhood collision data.
 
 Now that we have all the data we need, let's create a publication ready map:
 
@@ -494,6 +622,13 @@ nbhoods_ksi_2022 <- read_sf("../data/toronto-nbhoods-ksi-2022.shp")
 
 # Preview the data
 nbhoods_ksi_2022 %>% as_tibble
+```
+
+We should also save a our non-spatial ASE data that we converted into a spatial format:
+
+```{r}
+ase %>%
+  write_sf("../data/toronto-ase.geojson")
 ```
 
 # Other Tutorials
